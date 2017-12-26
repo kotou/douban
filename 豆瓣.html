@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-1.9.1.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="referrer" content="never">
+    <title>豆瓣电影</title>
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_519671_f4lu09kusvvaemi.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        a {
+            text-decoration: none;
+            color: #333;
+        }
+
+        .clearfix::after {
+            content: '';
+            clear: both;
+            display: block;
+        }
+
+        body {
+            font-size: 12px;
+            background: #fff;
+        }
+
+        html,body,main {
+            height: 100%;
+            position: relative;
+        }
+
+        section {
+            height: calc(100% - 50px);
+            overflow: scroll;
+            -webkit-overflow-scrolling: touch;
+            display: none;
+            padding: 10px;
+        }
+
+        section:first-child {
+            display: block;
+        }
+
+        footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            border-top: 1px solid #ccc;
+            background-color: #fff;
+            display: flex;
+        }
+
+        footer > div {
+            margin-top: 10px;
+            float: left;
+            width: 33.33%;
+            color: #666;
+            text-align: center;
+        }
+
+        footer span {
+            display: block;
+        }
+
+        .change {
+            color: #FF5722;
+        }
+
+        h2 {
+            font-size: 16px;
+            color: black;
+        }
+
+        .container,
+        .container img {
+            width: 70px;
+        }
+
+        .top > a {
+            display: block;
+            display: flex;
+        }
+
+        .information {
+            margin-left: 10px;
+            flex: 1;
+        }
+
+        .tag {
+            padding: 2px;
+        }
+
+        .top {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 10px;
+            display: none;
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: rotate(0deg)
+            }
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        .loading .iconfont {
+            display: inline-block;
+            animation: 1s rotate infinite;
+        }
+
+        #wrapper input {
+            padding: 8px;
+            border: 1px solid #FF5722;
+            width: calc(100% - 50px);
+            outline: none;
+        }
+
+        #wrapper .btn {
+            cursor: pointer;
+            display: inline-block;
+            background: #FF5722;
+            padding: 8px 10px;
+            color: #fff;
+            border-radius: 2px;
+            margin-left: 3px;
+        }
+
+        .box-three {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section id="wrap">
+        <div class="box">
+            <!--<div class="top">
+              <a href="https://movie.douban.com/subject/1291561/" class="clearfix">
+                <div class="fa container">
+                  <img src="http://img3.doubanio.com/view/photo/s_ratio_poster/public/p1910830216.jpg" alt="">
+                </div>
+                <div class="fa information">
+                  <h2>千与千寻</h2>
+                  <div class="tag"><span id="score">9.2</span><span>分 / 897930收藏</span></div>
+                  <div class="tag"><span id="year">2001</span> / <span id="type">剧情 / 动画 / 奇幻</span></div>
+                  <div class="tag">导演:<span id="director"> 宫崎骏</span></div>
+                  <div class="tag">主演:<span id="performer"> 柊瑠美、入野自由、夏木真理</span></div>
+                </div>
+              </a>
+            </div>-->
+        </div>
+        <div class="loading"><span class="iconfont icon-loading"></span></div>
+    </section>
+    <section id="ct">
+        <div class="box-two"></div>
+        <div class="loading"><span class="iconfont icon-loading"></span></div>
+    </section>
+    <section id="wrapper">
+        <div class="box-three">
+            <input type="text" placeholder="搜索电影"><span class="btn">搜索</span>
+        </div>
+        <div class="substance"></div>
+        <div class="loading"><span class="iconfont icon-loading"></span></div>
+    </section>
+</main>
+<footer class="clearfix">
+    <div class="change"><span class="iconfont icon-ranking"></span><span>Top250</span></div>
+    <div><span class="iconfont icon-na"></span><span></span>北美</div>
+    <div><span class="iconfont icon-search"></span><span>搜索</span></div>
+</footer>
+<script>
+    var wrap = {
+        init: function () {
+            this.$container = $('#wrap')
+            this.$content = this.$container.find('.box')
+            this.index = 0
+            this.loading = false
+            this.finish = false
+            this.bind()
+            this.start()
+        },
+        start: function () {
+            var _this = this
+            this.movieData(function (data) {
+                _this.rendering(data)
+            })
+        },
+        bind: function () {
+            var _this = this
+            this.$container.scroll(function () {
+                if (!_this.finish && _this.$container.height() +
+                    _this.$container.scrollTop() + 10 >= _this.$content.height()) {
+                    _this.start()
+                }
+            })
+        },
+        movieData: function (callback) {
+            var _this = this
+            if (_this.loading) return
+            _this.loading = true
+            _this.$container.find('.loading').show()
+            $.ajax({
+                url: 'https://api.douban.com/v2/movie/top250',
+                type: 'GET',
+                data: {
+                    start: _this.index,
+                    count: 20
+                },
+                dataType: 'jsonp'
+            }).done(function (result) {
+                _this.index += 20
+                if (result.index >= result.total) {
+                    _this.finish = true
+                }
+                callback && callback(result)
+            }).fail(function () {
+                alert('error')
+            }).always(function () {
+                _this.loading = false
+                _this.$container.find('.loading').hide()
+            })
+        },
+        rendering: function (data) {
+            var _this = this
+            data.subjects.forEach(function (term) {
+                var tpl = '<div class="top">\
+          <a href="https://movie.douban.com/subject/1291561/" class="clearfix">\
+          <div class="fa container">\
+          <img src="http://img3.doubanio.com/view/photo/s_ratio_poster/public/p1910830216.jpg" alt="">\
+          </div>\
+          <div class="fa information">\
+          <h2>千与千寻</h2>\
+          <div class="tag"><span id="score">9.2</span><span>分 / 897930收藏</span></div>\
+          <div class="tag"><span id="year">2001</span> / <span id="type">剧情 / 动画 / 奇幻</span></div>\
+          <div class="tag">导演：<span id="director"> 宫崎骏</span></div>\
+          <div class="tag">主演：<span id="performer"> 柊瑠美、入野自由、夏木真理</span></div>\
+          </div>\
+          </a>\
+          </div>'
+                var $node = $(tpl)
+                $node.find('a').attr('href', term.alt)
+                $node.find('.container img').attr('src', term.images.large)
+                $('.box').append($node)
+                $node.find('.information>h2').text(term.title)
+                $node.find('#score').text(term.rating.average)
+                $node.find('#year').text(term.year)
+                $node.find('#type').text(term.genres.join(' / '))
+                $node.find('#director').text(function () {
+                    var directorsArr = []
+                    term.directors.forEach(function (every) {
+                        directorsArr.push(every.name)
+                    })
+                    return directorsArr.join('、')
+                })
+                $node.find('#performer').text(function () {
+                    var castsArr = []
+                    term.casts.forEach(function (every) {
+                        castsArr.push(every.name)
+                    })
+                    return castsArr.join('、')
+                })
+                _this.$content.append($node)
+            })
+        },
+    }
+
+
+    var na = {
+        init: function () {
+            this.$container = $('#ct')
+            this.$content = this.$container.find('.box-two')
+            this.start()
+        },
+        start: function () {
+            var _this = this
+            this.movieData(function (data) {
+                _this.rendering(data)
+            })
+        },
+        movieData: function (callback) {
+            var _this = this
+            _this.$container.find('.loading').show()
+            $.ajax({
+                url: 'https://api.douban.com/v2/movie/us_box',
+                type: 'GET',
+                dataType: 'jsonp'
+            }).done(function (result) {
+                callback && callback(result)
+            }).fail(function () {
+                alert('error')
+            }).always(function () {
+                _this.$container.find('.loading').hide()
+            })
+        },
+        rendering: function (data) {
+            var _this = this
+            data.subjects.forEach(function (term) {
+                term = term.subject
+                var tpl = '<div class="top">\
+        <a href="https://movie.douban.com/subject/1291561/" class="clearfix">\
+        <div class="fa container">\
+        <img src="http://img3.doubanio.com/view/photo/s_ratio_poster/public/p1910830216.jpg" alt="">\
+        </div>\
+        <div class="fa information">\
+        <h2>千与千寻</h2>\
+        <div class="tag"><span id="score">9.2</span><span>分 / 897930收藏</span></div>\
+        <div class="tag"><span id="year">2001</span> / <span id="type">剧情 / 动画 / 奇幻</span></div>\
+        <div class="tag">导演：<span id="director"> 宫崎骏</span></div>\
+        <div class="tag">主演：<span id="performer"> 柊瑠美、入野自由、夏木真理</span></div>\
+        </div>\
+        </a>\
+        </div>'
+                var $node = $(tpl)
+                $node.find('a').attr('href', term.alt)
+                $node.find('.container img').attr('src', term.images.large)
+                $('.box').append($node)
+                $node.find('.information>h2').text(term.title)
+                $node.find('#score').text(term.rating.average)
+                $node.find('#year').text(term.year)
+                $node.find('#type').text(term.genres.join(' / '))
+                $node.find('#director').text(function () {
+                    var directorsArr = []
+                    term.directors.forEach(function (every) {
+                        directorsArr.push(every.name)
+                    })
+                    return directorsArr.join('、')
+                })
+                $node.find('#performer').text(function () {
+                    var castsArr = []
+                    term.casts.forEach(function (every) {
+                        castsArr.push(every.name)
+                    })
+                    return castsArr.join('、')
+                })
+                _this.$content.append($node)
+            })
+        },
+    }
+
+
+    var search = {
+        init: function () {
+            this.$container = $('#wrapper')
+            this.$content = this.$container.find('.substance')
+            this.$input = this.$container.find('input')
+            this.$btn = this.$container.find('.btn')
+            this.$sub = this.$container.find('.substance')
+            this.bind()
+        },
+        bind: function () {
+            var _this = this
+            this.$btn.click(function () {
+                if (_this.$sub.height() == 0) {
+                    _this.start()
+                } else {
+                    _this.$sub.empty()
+                    _this.start()
+                }
+            })
+        },
+        start: function () {
+            var _this = this
+            _this.movieData(function (data) {
+                _this.rendering(data)
+            })
+        },
+        movieData: function (callback) {
+            var _this = this
+            _this.$container.find('.loading').show()
+            $.ajax({
+                url: 'https://api.douban.com/v2/movie/search',
+                type: 'GET',
+                data: {
+                    q: _this.$input.val()
+                },
+                dataType: 'jsonp'
+            }).done(function (result) {
+                callback && callback(result)
+            }).fail(function () {
+                alert('error')
+            }).always(function () {
+                _this.$container.find('.loading').hide()
+            })
+        },
+        rendering: function (data) {
+            var _this = this
+            data.subjects.forEach(function (term) {
+                var tpl = '<div class="top">\
+        <a href="https://movie.douban.com/subject/1291561/" class="clearfix">\
+        <div class="fa container">\
+        <img src="http://img3.doubanio.com/view/photo/s_ratio_poster/public/p1910830216.jpg" alt="">\
+        </div>\
+        <div class="fa information">\
+        <h2>千与千寻</h2>\
+        <div class="tag"><span id="score">9.2</span><span>分 / 897930收藏</span></div>\
+        <div class="tag"><span id="year">2001</span> / <span id="type">剧情 / 动画 / 奇幻</span></div>\
+        <div class="tag">导演：<span id="director"> 宫崎骏</span></div>\
+        <div class="tag">主演：<span id="performer"> 柊瑠美、入野自由、夏木真理</span></div>\
+        </div>\
+        </a>\
+        </div>'
+                var $node = $(tpl)
+                $node.find('a').attr('href', term.alt)
+                $node.find('.container img').attr('src', term.images.large)
+                $('.box').append($node)
+                $node.find('.information>h2').text(term.title)
+                $node.find('#score').text(term.rating.average)
+                $node.find('#year').text(term.year)
+                $node.find('#type').text(term.genres.join(' / '))
+                $node.find('#director').text(function () {
+                    var directorsArr = []
+                    term.directors.forEach(function (every) {
+                        directorsArr.push(every.name)
+                    })
+                    return directorsArr.join('、')
+                })
+                $node.find('#performer').text(function () {
+                    var castsArr = []
+                    term.casts.forEach(function (every) {
+                        castsArr.push(every.name)
+                    })
+                    return castsArr.join('、')
+                })
+                _this.$content.append($node)
+            })
+        },
+    }
+
+
+    var app = {
+        init: function () {
+            this.$sidebar = $('footer>div')
+            this.bind()
+            wrap.init()
+            na.init()
+            search.init()
+        },
+        bind: function () {
+            this.$sidebar.click(function () {
+                var idx = $(this).index()
+                $('section').hide().eq(idx).fadeIn()
+                $(this).addClass('change').siblings().removeClass('change')
+            })
+        }
+    }
+    
+    app.init()
+</script>
+</body>
+</html>
